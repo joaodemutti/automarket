@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Relation, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+import type { Relation } from 'typeorm';
 import { Usuario } from './usuario.entity';
 
 @Entity('Mensagem')
@@ -21,7 +22,7 @@ export class Mensagem {
   @Column({ name: 'CriadoEm', type: 'timestamp' })
   criadoEm: Date;
 
-  @ManyToOne(()=>Usuario)
+  @ManyToOne(() => Usuario)
   @JoinColumn({name:"IdRemetente"})
   remetente: Relation<Usuario>
   

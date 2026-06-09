@@ -15,7 +15,7 @@
     "incremental": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "isolatedModules": false,
+    "isolatedModules": true,
     "jsx": "react-jsx",
     "paths": {
       "@/*": ["./*"]
@@ -37,5 +37,11 @@
   "exclude": [
     "node_modules",
     "chat-server"
-  ]
+  ],
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs",
+      "moduleResolution": "node"
+    }
+  }
 }
