@@ -1,36 +1,143 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AutoMarket
 
-## Getting Started
+Plataforma de compra e venda de veículos usados com chat em tempo real.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router) + **TypeORM** + **PostgreSQL**
+- **jose** (JWT, Edge-compatible) + **bcrypt** (passwords)
+- **TanStack Query v5** + **Axios** (frontend data layer)
+- **ShadcnUI** + **TailwindCSS v4** (UI)
+- **chat-server/** — Node.js + `ws` standalone WebSocket service
+
+---
+
+## Running locally
+
+### Prerequisites
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker compose up -d   # starts PostgreSQL on localhost:5432
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 1. Next.js app
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Install dependencies
+npm install --strict-ssl=false   # required if corporate proxy/cert issue
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Start dev server (TypeORM synchronize:true creates tables on first run)
+npm run dev
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000)
 
-To learn more about Next.js, take a look at the following resources:
+### 2. Chat server
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+cd chat-server
+npm install --strict-ssl=false
+npm run dev     # starts WebSocket server on ws://localhost:8080
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Health check: [http://localhost:8080/health](http://localhost:8080/health)
 
-## Deploy on Vercel
+### 3. API docs (Swagger)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Open [http://localhost:3000/docs](http://localhost:3000/docs) (Swagger UI)
+Raw spec: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Environment variables
+
+### `.env.local` (app)
+
+```env
+DATABASE_URL=postgresql://test:test@localhost:5432/test
+JWT_SECRET=automarket_super_secret_change_me_in_production
+JWT_EXPIRES_IN=7d
+NEXT_PUBLIC_WS_URL=ws://localhost:8080
+NODE_ENV=development
+```
+
+### `chat-server/.env`
+
+```env
+DATABASE_URL=postgresql://test:test@localhost:5432/test
+JWT_SECRET=automarket_super_secret_change_me_in_production   # must match app
+PORT=8080
+```
+
+---
+
+## Production (Vercel + Render + Neon)
+
+**Deploy order:** Neon → Render (chat-server) → Vercel
+
+### Before first Vercel deploy — bootstrap the schema
+
+`lib/db.ts` has `synchronize: false` in production. You must create tables first:
+
+```bash
+# Option A: point .env.local at Neon direct URL temporarily and run dev once
+DATABASE_URL=<neon-direct-url>  npm run dev   # TypeORM creates tables on start
+
+# Option B: run the existing migration against Neon
+DATABASE_URL=<neon-direct-url>  npm run migration:run
+```
+
+### Vercel env vars
+```
+DATABASE_URL=<neon-pooled-url>?sslmode=require
+JWT_SECRET=<same-as-render>
+JWT_EXPIRES_IN=7d
+NEXT_PUBLIC_WS_URL=wss://<chat>.onrender.com
+NODE_ENV=production
+```
+
+### Render env vars (chat-server, root dir: `chat-server/`)
+```
+DATABASE_URL=<neon-direct-url>?sslmode=require
+JWT_SECRET=<same-as-vercel>
+PORT=   # injected by Render automatically
+```
+
+---
+
+## Known issue: route conflict
+
+`app/(public)/page.tsx` and `app/page.tsx` both map to `/`. If `next build` errors with "Multiple pages for the same route", **delete `app/(public)/page.tsx`** — the home page is at `app/page.tsx`.
+
+---
+
+## Architecture
+
+```
+app/                   Next.js App Router
+  api/                 Route Handlers (JWT auth via jose + cookie)
+  (auth)/              login, register pages
+  (private)/           meus-anuncios, novo-anuncio, mensagens (JWT-guarded by middleware.ts)
+  (public)/            vehicle detail page
+  page.tsx             home — listing + filters
+lib/
+  db.ts                TypeORM DataSource singleton (global.__dataSource)
+  auth.ts              signJwt / verifyJwt / requireAuth (all async, jose)
+  axios.ts             Axios instance with 401 interceptor
+middleware.ts          Edge JWT guard — redirects (private) routes + returns 401 for API
+hooks/
+  useVeiculos.ts       useInfiniteQuery — paginated listing with filters
+  useVeiculo.ts        useQuery — single vehicle
+  useChat.ts           WebSocket + query cache integration + exponential backoff reconnect
+components/
+  ChatPanel.tsx        Real-time chat UI — sends via WS, displays history from query cache
+  Galeria.tsx          Image gallery with lightbox
+  VeiculoCard.tsx      Vehicle listing card
+  VeiculoFiltros.tsx   Filter form
+  ui/                  shadcn-style components (Button, Input, Card, Badge, …)
+chat-server/           Standalone Node.js + ws WebSocket server (deploy on Render)
+  src/index.ts         HTTP server + WSS, heartbeat, auth via subprotocol token
+  src/rooms.ts         Room map + broadcast + user→socket registry
+  src/db.ts            TypeORM DataSource (synchronize:false, single connection)
+  entities/            Verbatim copies of usuario.entity.ts + mensagem.entity.ts
+```

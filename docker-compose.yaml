@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16
-    container_name: dub-car-postgres
+    container_name: automarket-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: test
@@ -11,6 +11,48 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  chat-server:
+    build:
+      context: ./chat-server
+      dockerfile: Dockerfile
+    container_name: automarket-chat
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://test:test@postgres:5432/test
+      JWT_SECRET: automarket_super_secret_change_me_in_production
+      PORT: 8080
+      NODE_ENV: development
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: automarket-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://test:test@postgres:5432/test
+      JWT_SECRET: automarket_super_secret_change_me_in_production
+      JWT_EXPIRES_IN: 7d
+      NEXT_PUBLIC_WS_URL: ws://localhost:8080
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      chat-server:
+        condition: service_started
 
 volumes:
   pgdata:
