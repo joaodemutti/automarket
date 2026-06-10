@@ -11,7 +11,7 @@ interface Conversa {
   idOutroUsuario: string
   nomeOutroUsuario: string
   ultimaMensagem: MensagemItem
-  interessadosCount?: number
+  unreadCount: number
 }
 
 export default function MensagensPage() {
@@ -33,35 +33,39 @@ export default function MensagensPage() {
         await Promise.all(
           veiculos.map(async (v) => {
             try {
-              const [msgsResp, interessadosResp] = await Promise.allSettled([
-                api.get(`/veiculos/${v.id}/mensagens`),
-                api.get(`/veiculos/${v.id}/interessados`),
-              ])
-
-              const msgs: MensagemItem[] = msgsResp.status === 'fulfilled' ? msgsResp.value.data : []
+              const msgsResp = await api.get(`/veiculos/${v.id}/mensagens`)
+              const msgs: MensagemItem[] = msgsResp.data
               if (msgs.length === 0) return
 
-              const interessadosCount = interessadosResp.status === 'fulfilled'
-                ? Number(interessadosResp.value.data.count ?? 0)
-                : undefined
+              // Group by the other participant so each buyer gets their own card
+              const byOtherUser = new Map<string, MensagemItem[]>()
+              for (const msg of msgs) {
+                const idOutro = msg.idRemetente === payload.id ? msg.idDestinatario : msg.idRemetente
+                if (!byOtherUser.has(idOutro)) byOtherUser.set(idOutro, [])
+                byOtherUser.get(idOutro)!.push(msg)
+              }
 
-              const ultima = msgs[msgs.length - 1]
-              const idOutro = ultima.idRemetente === payload.id ? ultima.idDestinatario : ultima.idRemetente
-              const nomeOutro = ultima.remetente?.id !== payload.id
-                ? ultima.remetente?.nome ?? 'Usuário'
-                : 'Usuário'
+              for (const [idOutro, userMsgs] of byOtherUser) {
+                const ultima = userMsgs[userMsgs.length - 1]
+                const nomeOutro = ultima.remetente?.id !== payload.id
+                  ? ultima.remetente?.nome ?? 'Usuário'
+                  : 'Usuário'
+                const unreadCount = userMsgs.filter(
+                  (m) => m.idDestinatario === payload.id && !m.lidoEm
+                ).length
 
-              const key = `${v.id}:${idOutro}`
-              if (!conversaMap.has(key)) {
-                conversaMap.set(key, {
-                  idVeiculo: v.id,
-                  veiculo: `${v.ano} ${v.marca} ${v.modelo}`,
-                  vendido: !!v.vendidoEm,
-                  idOutroUsuario: idOutro,
-                  nomeOutroUsuario: nomeOutro,
-                  ultimaMensagem: ultima,
-                  interessadosCount,
-                })
+                const key = `${v.id}:${idOutro}`
+                if (!conversaMap.has(key)) {
+                  conversaMap.set(key, {
+                    idVeiculo: v.id,
+                    veiculo: `${v.ano} ${v.marca} ${v.modelo}`,
+                    vendido: !!v.vendidoEm,
+                    idOutroUsuario: idOutro,
+                    nomeOutroUsuario: nomeOutro,
+                    ultimaMensagem: ultima,
+                    unreadCount,
+                  })
+                }
               }
             } catch {
               // vehicle may not have messages
@@ -102,8 +106,15 @@ export default function MensagensPage() {
                 href={`/veiculos/${c.idVeiculo}?compradorId=${c.idOutroUsuario}`}
                 className="flex items-center gap-3 border border-border rounded-xl p-4 bg-card hover:bg-muted transition-colors"
               >
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary shrink-0">
-                  {c.nomeOutroUsuario.charAt(0).toUpperCase()}
+                <div className="relative shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
+                    {c.nomeOutroUsuario.charAt(0).toUpperCase()}
+                  </div>
+                  {c.unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 flex items-center justify-center bg-blue-600 text-white text-[10px] font-bold rounded-full px-1 leading-none">
+                      {c.unreadCount}
+                    </span>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -114,14 +125,7 @@ export default function MensagensPage() {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-xs text-primary font-medium truncate">{c.veiculo}</p>
-                    {!!c.interessadosCount && c.interessadosCount > 0 && (
-                      <span className="shrink-0 text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-1.5 py-0.5">
-                        {c.interessadosCount} interessados
-                      </span>
-                    )}
-                  </div>
+                  <p className="text-xs text-primary font-medium truncate">{c.veiculo}</p>
                   <p className="text-sm text-muted-foreground truncate">{c.ultimaMensagem.mensagem}</p>
                 </div>
                 <span className="text-xs text-muted-foreground shrink-0">

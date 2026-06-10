@@ -1,5 +1,5 @@
 'use client'
-import { use, useState } from 'react'
+import { use, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -7,6 +7,7 @@ import { api } from '@/lib/axios'
 import { useVeiculo } from '@/hooks/useVeiculo'
 import { Galeria } from '@/components/Galeria'
 import { ChatPanel } from '@/components/ChatPanel'
+import type { MensagemItem } from '@/hooks/useChat'
 
 interface Imagem {
   id: string
@@ -27,6 +28,7 @@ export default function VeiculoPage({ params }: { params: Promise<{ id: string }
   const compradorId = searchParams.get('compradorId')
   const queryClient = useQueryClient()
   const [chatAberto, setChatAberto] = useState(!!compradorId)
+  const [selectedBuyerId, setSelectedBuyerId] = useState<string | null>(compradorId)
 
   const { data: veiculo, isLoading } = useVeiculo(id)
 
@@ -75,6 +77,32 @@ export default function VeiculoPage({ params }: { params: Promise<{ id: string }
     },
   })
 
+  const isVendedor = !!me && !!veiculo && me.id === veiculo.idVendedor
+
+  const { data: todasMensagens = [] } = useQuery<MensagemItem[]>({
+    queryKey: ['mensagens-vendedor', id],
+    queryFn: () => api.get(`/veiculos/${id}/mensagens`).then((r) => r.data),
+    enabled: isVendedor,
+  })
+
+  const interessados = useMemo(() => {
+    if (!me) return []
+    const byBuyer = new Map<string, { id: string; nome: string; lastMessage: string; unreadCount: number }>()
+    for (const msg of todasMensagens) {
+      const buyerId = msg.idRemetente === me.id ? msg.idDestinatario : msg.idRemetente
+      const existing = byBuyer.get(buyerId)
+      const nome = msg.remetente?.id !== me.id ? (msg.remetente?.nome ?? 'Usuário') : (existing?.nome ?? 'Usuário')
+      const isUnread = msg.idDestinatario === me.id && !msg.lidoEm
+      byBuyer.set(buyerId, {
+        id: buyerId,
+        nome,
+        lastMessage: msg.mensagem,
+        unreadCount: (existing?.unreadCount ?? 0) + (isUnread ? 1 : 0),
+      })
+    }
+    return Array.from(byBuyer.values())
+  }, [todasMensagens, me])
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -95,7 +123,6 @@ export default function VeiculoPage({ params }: { params: Promise<{ id: string }
     Number(veiculo.valor)
   )
   const vendido = !!veiculo.vendidoEm
-  const isVendedor = !!me && me.id === veiculo.idVendedor
 
   return (
     <div className="min-h-screen">
@@ -234,16 +261,53 @@ export default function VeiculoPage({ params }: { params: Promise<{ id: string }
             />
           )}
 
-          {/* seller chat with a specific buyer (arrived via ?compradorId=) */}
-          {chatAberto && me && isVendedor && compradorId && (
-            <ChatPanel
-              idVeiculo={id}
-              idDestinatario={compradorId}
-              usuarioLogadoId={me.id}
-              isVendedor
-              vendido={vendido}
-              onConfirmarVenda={(idComprador) => compraMutation.mutate(idComprador)}
-            />
+          {/* seller: list of interested buyers */}
+          {isVendedor && interessados.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                Interessados ({interessados.length})
+              </p>
+              {interessados.map((buyer) => (
+                <button
+                  key={buyer.id}
+                  onClick={() => setSelectedBuyerId((prev) => prev === buyer.id ? null : buyer.id)}
+                  className={`w-full flex items-center gap-3 border rounded-xl p-3.5 transition-colors text-left ${
+                    selectedBuyerId === buyer.id
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border bg-card hover:bg-muted'
+                  }`}
+                >
+                  <div className="relative shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
+                      {buyer.nome.charAt(0).toUpperCase()}
+                    </div>
+                    {buyer.unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 flex items-center justify-center bg-blue-600 text-white text-[10px] font-bold rounded-full px-1 leading-none">
+                        {buyer.unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">{buyer.nome}</p>
+                    <p className="text-xs text-muted-foreground truncate">{buyer.lastMessage}</p>
+                  </div>
+                  <svg className="w-4 h-4 text-muted-foreground shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              ))}
+
+              {selectedBuyerId && me && (
+                <ChatPanel
+                  idVeiculo={id}
+                  idDestinatario={selectedBuyerId}
+                  usuarioLogadoId={me.id}
+                  isVendedor
+                  vendido={vendido}
+                  onConfirmarVenda={(idComprador) => compraMutation.mutate(idComprador)}
+                />
+              )}
+            </div>
           )}
         </div>
       </div>

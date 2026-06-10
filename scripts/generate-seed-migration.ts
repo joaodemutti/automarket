@@ -19,6 +19,8 @@ const VEICULOS_SEED = [
 
 // buyer1 + buyer2 = 2 interessados; buyer1 only = 1 interessado
 const MENSAGENS_SEED = [
+  { veiculoIdx: 0, remetenteKey: 'buyer1', textos: ['Ainda está disponível?', 'Quero comprar!'] },
+  { veiculoIdx: 1, remetenteKey: 'buyer1', textos: ['Tenho interesse no Onix, podemos fechar negócio?'] },
   { veiculoIdx: 2, remetenteKey: 'buyer1', textos: ['Ainda está disponível?', 'Qual o valor mínimo?'] },
   { veiculoIdx: 2, remetenteKey: 'buyer2', textos: ['Vi o anúncio, tenho interesse!'] },
   { veiculoIdx: 4, remetenteKey: 'buyer1', textos: ['Tenho interesse, pode me ligar?'] },

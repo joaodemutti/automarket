@@ -10,6 +10,7 @@ export interface MensagemItem {
   idDestinatario: string
   idVeiculo: string
   criadoEm: string
+  lidoEm: string | null
   remetente: { id: string; nome: string } | null
 }
 

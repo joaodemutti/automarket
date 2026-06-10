@@ -49,6 +49,7 @@ export async function GET(
     idDestinatario: m.idDestinatario,
     idVeiculo: m.idVeiculo,
     criadoEm: m.criadoEm,
+    lidoEm: m.lidoEm ?? null,
     remetente: m.remetente
       ? { id: m.remetente.id, nome: m.remetente.nome }
       : null,

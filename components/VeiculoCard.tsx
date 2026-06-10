@@ -52,12 +52,12 @@ export function VeiculoCard({ veiculo }: Props) {
         </p>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{veiculo.cor}</span>
+          <span className="text-xs text-muted-foreground">{veiculo.quilometragem.toLocaleString('pt-BR')} km</span>
           {!!veiculo.interessadosCount && veiculo.interessadosCount > 0 && (
             <span className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
-              {veiculo.interessadosCount} interessados
+              {veiculo.interessadosCount} interessado{veiculo.interessadosCount > 1 && "s"}
             </span>
           )}
-          <span className="text-xs text-muted-foreground">{veiculo.quilometragem.toLocaleString('pt-BR')} km</span>
         </div>
         <div className="flex items-center justify-between mt-3">
           <p className="text-xl font-bold text-primary">{valor}</p>
