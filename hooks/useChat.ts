@@ -20,6 +20,7 @@ export function useChat(idVeiculo: string, idDestinatario: string) {
   const wsRef = useRef<WebSocket | null>(null)
   const [hasNotification, setHasNotification] = useState(false)
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const backoffRef = useRef(1000)
   const mountedRef = useRef(true)
 
@@ -43,6 +44,10 @@ export function useChat(idVeiculo: string, idDestinatario: string) {
 
       ws.onopen = () => {
         backoffRef.current = 1000
+        if (pingRef.current) clearInterval(pingRef.current)
+        pingRef.current = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }))
+        }, 20_000)
       }
 
       ws.onmessage = (event) => {
@@ -65,6 +70,7 @@ export function useChat(idVeiculo: string, idDestinatario: string) {
       }
 
       ws.onclose = () => {
+        if (pingRef.current) clearInterval(pingRef.current)
         if (!mountedRef.current) return
         const delay = Math.min(backoffRef.current, 10_000)
         backoffRef.current = Math.min(backoffRef.current * 2, 10_000)
@@ -84,6 +90,7 @@ export function useChat(idVeiculo: string, idDestinatario: string) {
     return () => {
       mountedRef.current = false
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current)
+      if (pingRef.current) clearInterval(pingRef.current)
       wsRef.current?.close()
     }
   }, [connect])

@@ -54,6 +54,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const wsRef = useRef<WebSocket | null>(null)
   const mountedRef = useRef(true)
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const backoffRef = useRef(1000)
   const toastIdRef = useRef(0)
 
@@ -80,7 +81,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       const ws = new WebSocket(wsUrl, ['auth', data.token])
       wsRef.current = ws
 
-      ws.onopen = () => { backoffRef.current = 1000 }
+      ws.onopen = () => {
+        backoffRef.current = 1000
+        if (pingRef.current) clearInterval(pingRef.current)
+        pingRef.current = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }))
+        }, 20_000)
+      }
 
       ws.onmessage = (event) => {
         try {
@@ -97,6 +104,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       }
 
       ws.onclose = () => {
+        if (pingRef.current) clearInterval(pingRef.current)
         if (!mountedRef.current) return
         const delay = Math.min(backoffRef.current, 10_000)
         backoffRef.current = Math.min(backoffRef.current * 2, 10_000)
@@ -114,6 +122,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     return () => {
       mountedRef.current = false
       if (reconnectRef.current) clearTimeout(reconnectRef.current)
+      if (pingRef.current) clearInterval(pingRef.current)
       wsRef.current?.close()
     }
   }, [connect, refresh])

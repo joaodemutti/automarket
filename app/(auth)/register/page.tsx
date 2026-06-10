@@ -29,7 +29,7 @@ export default function RegisterPage() {
         sessionStorage.removeItem('redirect')
         router.push(redirect)
       } else {
-        router.back()
+        router.push('/')
       }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
