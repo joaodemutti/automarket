@@ -17,7 +17,7 @@ export default function HomePage() {
       <div className="bg-linear-to-r from-slate-900 to-blue-900 text-white px-4 py-10">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold mb-1">Encontre seu próximo veículo</h1>
-          <p className="text-slate-300 text-sm mt-1">Anúncios verificados com chat direto com o vendedor</p>
+          <p className="text-slate-300 text-sm mt-1">Anúncios com chat direto com o vendedor</p>
         </div>
       </div>
 

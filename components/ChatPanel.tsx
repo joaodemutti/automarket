@@ -32,7 +32,7 @@ export function ChatPanel({ idVeiculo, idDestinatario, usuarioLogadoId, isVended
 
   // Mark messages as read when chat opens, and whenever new messages arrive
   useEffect(() => {
-    api.patch(`/veiculos/${idVeiculo}/mensagens`).then(() => refreshNotifications()).catch(() => {})
+    api.patch(`/veiculos/${idVeiculo}/mensagens`, null, { params: { participanteId: idDestinatario } }).then(() => refreshNotifications()).catch(() => {})
   }, [idVeiculo, historyQuery.data, refreshNotifications])
 
   function handleSubmit(e: React.FormEvent) {

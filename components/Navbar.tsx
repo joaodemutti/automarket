@@ -8,7 +8,7 @@ import { useNotificationCount } from '@/components/NotificationProvider'
 export function Navbar() {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { count: notifCount, clearCount } = useNotificationCount()
+  const { count: notifCount } = useNotificationCount()
 
   const { data: me } = useQuery<{ id: string; nome: string } | null>({
     queryKey: ['me'],
@@ -28,7 +28,7 @@ export function Navbar() {
   async function logout() {
     await api.post('/auth/logout')
     queryClient.setQueryData(['me'], null)
-    router.push('/login')
+    router.push('/')
   }
 
   return (
@@ -48,7 +48,6 @@ export function Navbar() {
 
               <Link
                 href="/mensagens"
-                onClick={clearCount}
                 className="relative flex items-center gap-1.5 px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
               >
                 Mensagens

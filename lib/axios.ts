@@ -11,6 +11,7 @@ api.interceptors.response.use(
       window.location.pathname === '/login' || window.location.pathname === '/register'
     )
     if (error.response?.status === 401 && typeof window !== 'undefined' && !isAuthCheck && !onAuthPage) {
+      sessionStorage.setItem('redirect', window.location.pathname + window.location.search)
       window.location.href = '/login'
     }
     return Promise.reject(error)

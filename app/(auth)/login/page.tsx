@@ -20,7 +20,13 @@ export default function LoginPage() {
     try {
       await api.post('/auth/login', { login, senha })
       await queryClient.invalidateQueries({ queryKey: ['me'] })
-      router.back()
+      const redirect = sessionStorage.getItem('redirect')
+      if (redirect) {
+        sessionStorage.removeItem('redirect')
+        router.push(redirect)
+      } else {
+        router.back()
+      }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
       setError(msg ?? 'Erro ao fazer login')

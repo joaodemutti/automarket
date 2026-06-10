@@ -30,17 +30,27 @@ export async function GET(
   const { id: idVeiculo } = await params
   const ds = await getDataSource()
 
-  const mensagens = await ds
+  const participanteId = new URL(request.url).searchParams.get('participanteId')
+
+  const qb = ds
     .getRepository(Mensagem)
     .createQueryBuilder('mensagem')
     .leftJoinAndSelect('mensagem.remetente', 'remetente')
     .where('mensagem.idVeiculo = :idVeiculo', { idVeiculo })
-    .andWhere(
+
+  if (participanteId) {
+    qb.andWhere(
+      '(mensagem.idRemetente = :uid AND mensagem.idDestinatario = :pid OR mensagem.idRemetente = :pid AND mensagem.idDestinatario = :uid)',
+      { uid: user.id, pid: participanteId }
+    )
+  } else {
+    qb.andWhere(
       '(mensagem.idRemetente = :uid OR mensagem.idDestinatario = :uid)',
       { uid: user.id }
     )
-    .orderBy('mensagem.criadoEm', 'ASC')
-    .getMany()
+  }
+
+  const mensagens = await qb.orderBy('mensagem.criadoEm', 'ASC').getMany()
 
   const result = mensagens.map((m) => ({
     id: m.id,
@@ -66,7 +76,9 @@ export async function PATCH(
   const { id: idVeiculo } = await params
   const ds = await getDataSource()
 
-  await ds
+  const participanteIdPatch = new URL(request.url).searchParams.get('participanteId')
+
+  const updateQb = ds
     .getRepository(Mensagem)
     .createQueryBuilder()
     .update()
@@ -74,7 +86,12 @@ export async function PATCH(
     .where('"IdVeiculo" = :idVeiculo', { idVeiculo })
     .andWhere('"IdDestinatario" = :uid', { uid: user.id })
     .andWhere('"LidoEm" IS NULL')
-    .execute()
+
+  if (participanteIdPatch) {
+    updateQb.andWhere('"IdRemetente" = :pid', { pid: participanteIdPatch })
+  }
+
+  await updateQb.execute()
 
   return Response.json({ ok: true })
 }

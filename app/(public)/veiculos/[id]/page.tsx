@@ -236,6 +236,7 @@ export default function VeiculoPage({ params }: { params: Promise<{ id: string }
             <button
               onClick={() => {
                 if (!me) {
+                  sessionStorage.setItem('redirect', window.location.pathname)
                   router.push('/login')
                   return
                 }
@@ -268,45 +269,47 @@ export default function VeiculoPage({ params }: { params: Promise<{ id: string }
                 Interessados ({interessados.length})
               </p>
               {interessados.map((buyer) => (
-                <button
-                  key={buyer.id}
-                  onClick={() => setSelectedBuyerId((prev) => prev === buyer.id ? null : buyer.id)}
-                  className={`w-full flex items-center gap-3 border rounded-xl p-3.5 transition-colors text-left ${
-                    selectedBuyerId === buyer.id
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border bg-card hover:bg-muted'
-                  }`}
-                >
-                  <div className="relative shrink-0">
-                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
-                      {buyer.nome.charAt(0).toUpperCase()}
+                <div key={buyer.id}>
+                  <button
+                    onClick={() => setSelectedBuyerId((prev) => prev === buyer.id ? null : buyer.id)}
+                    className={`w-full flex items-center gap-3 border rounded-xl p-3.5 transition-colors text-left ${
+                      selectedBuyerId === buyer.id
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border bg-card hover:bg-muted'
+                    }`}
+                  >
+                    <div className="relative shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
+                        {buyer.nome.charAt(0).toUpperCase()}
+                      </div>
+                      {buyer.unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 flex items-center justify-center bg-blue-600 text-white text-[10px] font-bold rounded-full px-1 leading-none">
+                          {buyer.unreadCount}
+                        </span>
+                      )}
                     </div>
-                    {buyer.unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 flex items-center justify-center bg-blue-600 text-white text-[10px] font-bold rounded-full px-1 leading-none">
-                        {buyer.unreadCount}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold">{buyer.nome}</p>
-                    <p className="text-xs text-muted-foreground truncate">{buyer.lastMessage}</p>
-                  </div>
-                  <svg className="w-4 h-4 text-muted-foreground shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold">{buyer.nome}</p>
+                      <p className="text-xs text-muted-foreground truncate">{buyer.lastMessage}</p>
+                    </div>
+                    <svg className="w-4 h-4 text-muted-foreground shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  {selectedBuyerId === buyer.id && me && (
+                    <div className="mt-2">
+                      <ChatPanel
+                        idVeiculo={id}
+                        idDestinatario={buyer.id}
+                        usuarioLogadoId={me.id}
+                        isVendedor
+                        vendido={vendido}
+                        onConfirmarVenda={(idComprador) => compraMutation.mutate(idComprador)}
+                      />
+                    </div>
+                  )}
+                </div>
               ))}
-
-              {selectedBuyerId && me && (
-                <ChatPanel
-                  idVeiculo={id}
-                  idDestinatario={selectedBuyerId}
-                  usuarioLogadoId={me.id}
-                  isVendedor
-                  vendido={vendido}
-                  onConfirmarVenda={(idComprador) => compraMutation.mutate(idComprador)}
-                />
-              )}
             </div>
           )}
         </div>

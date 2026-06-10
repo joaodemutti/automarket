@@ -23,9 +23,12 @@ export function useChat(idVeiculo: string, idDestinatario: string) {
   const mountedRef = useRef(true)
 
   const historyQuery = useQuery<MensagemItem[]>({
-    queryKey: ['mensagens', idVeiculo],
-    queryFn: () => api.get(`/veiculos/${idVeiculo}/mensagens`).then((r) => r.data),
-    enabled: !!idVeiculo,
+    queryKey: ['mensagens', idVeiculo, idDestinatario],
+    queryFn: () =>
+      api
+        .get(`/veiculos/${idVeiculo}/mensagens`, { params: { participanteId: idDestinatario } })
+        .then((r) => r.data),
+    enabled: !!idVeiculo && !!idDestinatario,
   })
 
   const connect = useCallback(async () => {
