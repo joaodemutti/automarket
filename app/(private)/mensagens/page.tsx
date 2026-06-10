@@ -67,7 +67,7 @@ async function fetchConversas(): Promise<Conversa[]> {
 }
 
 export default function MensagensPage() {
-  const { data: conversas = [], isLoading: loading } = useQuery({
+  const { data: conversas = [], isLoading: loading, isFetching } = useQuery({
     queryKey: ['conversas'],
     queryFn: fetchConversas,
   })
@@ -75,7 +75,12 @@ export default function MensagensPage() {
   return (
     <div className="min-h-screen">
       <div className="max-w-2xl mx-auto px-4 py-6">
-        <h1 className="text-xl font-semibold mb-4">Conversas</h1>
+        <div className="flex items-center gap-2 mb-4">
+          <h1 className="text-xl font-semibold">Conversas</h1>
+          {isFetching && !loading && (
+            <span className="text-xs text-muted-foreground animate-pulse">atualizando…</span>
+          )}
+        </div>
 
         {loading ? (
           <div className="space-y-2">

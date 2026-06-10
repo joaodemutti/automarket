@@ -48,6 +48,9 @@ export function ChatPanel({ idVeiculo, idDestinatario, usuarioLogadoId, isVended
     <div className="flex flex-col border border-border rounded-xl overflow-hidden h-120">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/50">
         <span className="font-semibold text-sm">Chat</span>
+        {historyQuery.isFetching && !historyQuery.isLoading && (
+          <span className="text-xs text-muted-foreground animate-pulse">atualizando…</span>
+        )}
         {hasNotification && (
           <span className="ml-auto text-xs bg-red-500 text-white rounded-full px-2 py-0.5">Nova mensagem</span>
         )}
