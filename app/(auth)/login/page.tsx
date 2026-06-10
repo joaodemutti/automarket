@@ -2,10 +2,12 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 
 export default function LoginPage() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [login, setLogin] = useState('')
   const [senha, setSenha] = useState('')
   const [error, setError] = useState('')
@@ -17,8 +19,8 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await api.post('/auth/login', { login, senha })
-      router.push('/')
-      router.refresh()
+      await queryClient.invalidateQueries({ queryKey: ['me'] })
+      router.back()
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
       setError(msg ?? 'Erro ao fazer login')

@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server'
 import { getDataSource } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { Veiculo } from '@/src/entity/veiculo.entity'
+import { Mensagem } from '@/src/entity/mensagem.entity'
 
 /**
  * @swagger
@@ -26,13 +27,17 @@ export async function GET(
 ) {
   const { id } = await params
   const ds = await getDataSource()
-  const veiculo = await ds.getRepository(Veiculo).findOne({
-    where: { id },
-  })
+  const veiculo = await ds.getRepository(Veiculo).findOne({ where: { id } })
   if (!veiculo || veiculo.deletadoEm) {
     return Response.json({ error: 'Veículo não encontrado' }, { status: 404 })
   }
-  return Response.json(veiculo)
+  const row = await ds
+    .getRepository(Mensagem)
+    .createQueryBuilder('m')
+    .select('COUNT(DISTINCT m."IdRemetente")', 'count')
+    .where('m."IdVeiculo" = :id', { id })
+    .getRawOne<{ count: string }>()
+  return Response.json({ ...veiculo, interessadosCount: Number(row?.count ?? 0) })
 }
 
 /**
@@ -40,7 +45,7 @@ export async function GET(
  * /api/veiculos/{id}:
  *   put:
  *     summary: Atualiza veiculo (auth, apenas dono)
- *     tags: [Veiculos]
+ *     tags: [Veículos]
  */
 export async function PUT(
   request: NextRequest,

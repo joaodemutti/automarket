@@ -36,6 +36,7 @@ export interface VeiculoItem {
   vendidoEm?: string
   criadoEm: string
   imagemCapa?: string | null
+  interessadosCount?: number
 }
 
 export function useVeiculos(filtros: VeiculoFiltros = {}) {

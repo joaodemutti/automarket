@@ -7,7 +7,7 @@ const encodedKey = new TextEncoder().encode(
 
 const PRIVATE_PAGE_PATTERN = /^\/(private)\//
 const AUTH_REQUIRED_API_PATTERN =
-  /^\/api\/(auth\/ws-token|veiculos\/[^/]+\/compra|veiculos\/[^/]+\/mensagens|veiculos$|veiculos\/[^/]+$)/
+  /^\/api\/(auth\/ws-token|veiculos\/[^/]+\/compra|veiculos\/[^/]+\/mensagens|veiculos\/[^/]+\/interessados)/
 
 async function verifyToken(token: string) {
   try {
@@ -47,7 +47,6 @@ export const config = {
     '/api/auth/ws-token',
     '/api/veiculos/:path*/compra',
     '/api/veiculos/:path*/mensagens',
-    '/api/veiculos',
-    '/api/veiculos/:path*',
+    '/api/veiculos/:path*/interessados',
   ],
 }

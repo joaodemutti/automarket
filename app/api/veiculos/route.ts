@@ -3,6 +3,7 @@ import { getDataSource } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { Veiculo } from '@/src/entity/veiculo.entity'
 import { Imagem } from '@/src/entity/imagem.entity'
+import { Mensagem } from '@/src/entity/mensagem.entity'
 
 /**
  * @swagger
@@ -91,15 +92,27 @@ export async function GET(request: NextRequest) {
   const [data, total] = await qb.getManyAndCount()
   const vehicleIds = data.map((veiculo) => veiculo.id)
 
-  const imagens = vehicleIds.length
-    ? await ds
-        .getRepository(Imagem)
-        .createQueryBuilder('imagem')
-        .where('imagem.idVeiculo IN (:...vehicleIds)', { vehicleIds })
-        .andWhere('imagem.deletadoEm IS NULL')
-        .orderBy('imagem.criadoEm', 'ASC')
-        .getMany()
-    : []
+  const [imagens, interessadosRows] = await Promise.all([
+    vehicleIds.length
+      ? ds
+          .getRepository(Imagem)
+          .createQueryBuilder('imagem')
+          .where('imagem.idVeiculo IN (:...vehicleIds)', { vehicleIds })
+          .andWhere('imagem.deletadoEm IS NULL')
+          .orderBy('imagem.criadoEm', 'ASC')
+          .getMany()
+      : Promise.resolve([]),
+    vehicleIds.length
+      ? ds
+          .getRepository(Mensagem)
+          .createQueryBuilder('m')
+          .select('m."IdVeiculo"', 'idVeiculo')
+          .addSelect('COUNT(DISTINCT m."IdRemetente")', 'count')
+          .where('m."IdVeiculo" IN (:...vehicleIds)', { vehicleIds })
+          .groupBy('m."IdVeiculo"')
+          .getRawMany<{ idVeiculo: string; count: string }>()
+      : Promise.resolve([]),
+  ])
 
   const imagemCapaPorVeiculo = new Map<string, string>()
   for (const imagem of imagens) {
@@ -108,9 +121,15 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const interessadosPorVeiculo = new Map<string, number>()
+  for (const row of interessadosRows) {
+    interessadosPorVeiculo.set(row.idVeiculo, Number(row.count))
+  }
+
   const result = data.map((veiculo) => ({
     ...veiculo,
     imagemCapa: imagemCapaPorVeiculo.get(veiculo.id) ?? null,
+    interessadosCount: interessadosPorVeiculo.get(veiculo.id) ?? 0,
   }))
 
   return Response.json({

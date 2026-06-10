@@ -2,10 +2,12 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 
 export default function RegisterPage() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const [form, setForm] = useState({ login: '', senha: '', nome: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -21,8 +23,8 @@ export default function RegisterPage() {
     try {
       await api.post('/auth/register', form)
       await api.post('/auth/login', { login: form.login, senha: form.senha })
-      router.push('/')
-      router.refresh()
+      await queryClient.invalidateQueries({ queryKey: ['me'] })
+      router.back()
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
       setError(msg ?? 'Erro ao cadastrar')
