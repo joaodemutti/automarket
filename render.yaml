@@ -2,6 +2,7 @@ services:
   - type: web
     name: automarket-chat
     runtime: node
+    plan: free
     rootDir: chat-server
     buildCommand: npm install && npm run build
     startCommand: npm start
