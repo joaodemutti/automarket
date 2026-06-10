@@ -9,6 +9,9 @@ out/
 build/
 dist/
 
+# Generated
+public/swagger.json
+
 # Ambiente
 .env
 .env.local
