@@ -109,7 +109,7 @@ export default function MeusAnunciosPage() {
               return (
                 <div
                   key={v.id}
-                  className="flex items-center gap-4 border border-slate-200/80 rounded-2xl p-4 bg-card shadow-sm hover:shadow-md transition-shadow"
+                  className="flex flex-wrap sm:flex-nowrap items-center gap-4 border border-slate-200/80 rounded-2xl p-4 bg-card shadow-sm hover:shadow-md transition-shadow"
                 >
                   {/* Thumbnail */}
                   <div className="w-20 h-16 rounded-xl overflow-hidden bg-muted shrink-0">
@@ -163,7 +163,7 @@ export default function MeusAnunciosPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 shrink-0">
+                  <div className="flex flex-col sm:flex-row gap-2 shrink-0">
                     <Link
                       href={`/veiculos/${v.id}`}
                       className="text-sm px-3 py-1.5 border border-border rounded-lg hover:bg-muted transition-colors"

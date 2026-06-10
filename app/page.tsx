@@ -7,6 +7,7 @@ import { VeiculoFiltros as FiltrosComponent } from '@/components/VeiculoFiltros'
 
 export default function HomePage() {
   const [filtros, setFiltros] = useState<VeiculoFiltros>({})
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useVeiculos(filtros)
 
   const veiculos = data?.pages.flatMap((p) => p.data) ?? []
@@ -16,13 +17,31 @@ export default function HomePage() {
       {/* Hero Banner */}
       <div className="bg-linear-to-r from-slate-900 to-blue-900 text-white px-4 py-10">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold mb-1">Encontre seu próximo veículo</h1>
+          <h1 className="text-2xl md:text-3xl font-bold mb-1">Encontre seu próximo veículo</h1>
           <p className="text-slate-300 text-sm mt-1">Anúncios com chat direto com o vendedor</p>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8 flex gap-6 items-start">
-        <aside className="w-72 shrink-0 sticky top-20">
+      <div className="max-w-7xl mx-auto px-4 py-6 md:py-8 md:flex gap-6 items-start">
+        {/* Mobile filter toggle */}
+        <div className="md:hidden mb-4">
+          <button
+            onClick={() => setFiltrosAbertos((o) => !o)}
+            className="flex items-center gap-2 px-4 py-2 border border-border rounded-xl text-sm font-medium bg-card shadow-sm w-full justify-center"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+            </svg>
+            {filtrosAbertos ? 'Ocultar filtros' : 'Filtrar veículos'}
+          </button>
+          {filtrosAbertos && (
+            <div className="mt-3">
+              <FiltrosComponent onFiltrar={(f) => { setFiltros(f); setFiltrosAbertos(false) }} />
+            </div>
+          )}
+        </div>
+
+        <aside className="hidden md:block w-72 shrink-0 sticky top-20">
           <FiltrosComponent onFiltrar={setFiltros} />
         </aside>
 

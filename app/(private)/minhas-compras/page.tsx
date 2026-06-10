@@ -49,7 +49,7 @@ export default function MinhasComprasPage() {
             {veiculos.map((v) => {
               const valor = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v.valor))
               return (
-                <div key={v.id} className="flex items-center justify-between border border-border rounded-xl p-4 bg-card">
+                <div key={v.id} className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 border border-border rounded-xl p-4 bg-card">
                   <div className="flex items-center gap-4">
                     {v.imagemCapa && (
                       <img
