@@ -50,7 +50,7 @@ export function useChat(idVeiculo: string, idDestinatario: string) {
           const msg = JSON.parse(event.data)
           if (msg.type === 'message') {
             queryClient.setQueryData<MensagemItem[]>(
-              ['mensagens', idVeiculo],
+              ['mensagens', idVeiculo, idDestinatario],
               (prev = []) => {
                 const exists = prev.some((m) => m.id === msg.data.id)
                 return exists ? prev : [...prev, msg.data]
@@ -76,7 +76,7 @@ export function useChat(idVeiculo: string, idDestinatario: string) {
       backoffRef.current = Math.min(backoffRef.current * 2, 10_000)
       reconnectTimeoutRef.current = setTimeout(() => connect(), delay)
     }
-  }, [idVeiculo, queryClient])
+  }, [idVeiculo, idDestinatario, queryClient])
 
   useEffect(() => {
     mountedRef.current = true

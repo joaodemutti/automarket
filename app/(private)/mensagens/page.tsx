@@ -61,7 +61,9 @@ async function fetchConversas(): Promise<Conversa[]> {
     })
   )
 
-  return Array.from(conversaMap.values())
+  return Array.from(conversaMap.values()).sort(
+    (a, b) => new Date(b.ultimaMensagem.criadoEm).getTime() - new Date(a.ultimaMensagem.criadoEm).getTime()
+  )
 }
 
 export default function MensagensPage() {
