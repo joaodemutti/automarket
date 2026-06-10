@@ -289,7 +289,14 @@ export default function VeiculoPage({ params }: { params: Promise<{ id: string }
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold">{buyer.nome}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold">{buyer.nome}</p>
+                        {veiculo.idComprador === buyer.id && (
+                          <span className="text-[10px] font-bold bg-green-100 text-green-700 border border-green-200 rounded-full px-2 py-0.5 shrink-0">
+                            Comprador
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground truncate">{buyer.lastMessage}</p>
                     </div>
                     <svg className="w-4 h-4 text-muted-foreground shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
