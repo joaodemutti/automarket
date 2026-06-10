@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: automarket-chat
+    runtime: node
+    rootDir: chat-server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
