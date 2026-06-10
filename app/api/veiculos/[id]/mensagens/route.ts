@@ -36,6 +36,7 @@ export async function GET(
     .getRepository(Mensagem)
     .createQueryBuilder('mensagem')
     .leftJoinAndSelect('mensagem.remetente', 'remetente')
+    .leftJoinAndSelect('mensagem.destinatario', 'destinatario')
     .where('mensagem.idVeiculo = :idVeiculo', { idVeiculo })
 
   if (participanteId) {
@@ -62,6 +63,9 @@ export async function GET(
     lidoEm: m.lidoEm ?? null,
     remetente: m.remetente
       ? { id: m.remetente.id, nome: m.remetente.nome }
+      : null,
+    destinatario: m.destinatario
+      ? { id: m.destinatario.id, nome: m.destinatario.nome }
       : null,
   }))
 

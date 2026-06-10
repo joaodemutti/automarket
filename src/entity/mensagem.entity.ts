@@ -26,7 +26,10 @@ export class Mensagem {
   lidoEm: Date | null;
 
   @ManyToOne(() => Usuario)
-  @JoinColumn({name:"IdRemetente"})
+  @JoinColumn({ name: 'IdRemetente' })
   remetente: Relation<Usuario>
-  
+
+  @ManyToOne(() => Usuario)
+  @JoinColumn({ name: 'IdDestinatario' })
+  destinatario: Relation<Usuario>
 }

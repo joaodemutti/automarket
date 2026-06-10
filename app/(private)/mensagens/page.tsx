@@ -1,6 +1,6 @@
 'use client'
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 import type { MensagemItem } from '@/hooks/useChat'
 
@@ -14,74 +14,61 @@ interface Conversa {
   unreadCount: number
 }
 
-export default function MensagensPage() {
-  const [conversas, setConversas] = useState<Conversa[]>([])
-  const [loading, setLoading] = useState(true)
+async function fetchConversas(): Promise<Conversa[]> {
+  const wsResp = await api.get('/auth/ws-token')
+  const parts = wsResp.data.token.split('.')
+  const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
 
-  useEffect(() => {
-    async function load() {
+  const veiculosResp = await api.get('/veiculos', { params: { limit: 48, incluirVendidos: 'true' } })
+  const veiculos: { id: string; marca: string; modelo: string; ano: number; vendidoEm?: string }[] = veiculosResp.data.data
+
+  const conversaMap = new Map<string, Conversa>()
+
+  await Promise.all(
+    veiculos.map(async (v) => {
       try {
-        const wsResp = await api.get('/auth/ws-token')
-        const parts = wsResp.data.token.split('.')
-        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+        const msgs: MensagemItem[] = (await api.get(`/veiculos/${v.id}/mensagens`)).data
+        if (msgs.length === 0) return
 
-        const veiculosResp = await api.get('/veiculos', { params: { limit: 48, incluirVendidos: 'true' } })
-        const veiculos: { id: string; marca: string; modelo: string; ano: number; vendidoEm?: string }[] = veiculosResp.data.data
+        const byOtherUser = new Map<string, MensagemItem[]>()
+        for (const msg of msgs) {
+          const idOutro = msg.idRemetente === payload.id ? msg.idDestinatario : msg.idRemetente
+          if (!byOtherUser.has(idOutro)) byOtherUser.set(idOutro, [])
+          byOtherUser.get(idOutro)!.push(msg)
+        }
 
-        const conversaMap = new Map<string, Conversa>()
+        for (const [idOutro, userMsgs] of byOtherUser) {
+          const ultima = userMsgs[userMsgs.length - 1]
+          const nomeOutro =
+            userMsgs.find((m) => m.remetente?.id === idOutro)?.remetente?.nome ??
+            userMsgs.find((m) => m.destinatario?.id === idOutro)?.destinatario?.nome ??
+            'Usuário'
+          const unreadCount = userMsgs.filter((m) => m.idDestinatario === payload.id && !m.lidoEm).length
 
-        await Promise.all(
-          veiculos.map(async (v) => {
-            try {
-              const msgsResp = await api.get(`/veiculos/${v.id}/mensagens`)
-              const msgs: MensagemItem[] = msgsResp.data
-              if (msgs.length === 0) return
-
-              // Group by the other participant so each buyer gets their own card
-              const byOtherUser = new Map<string, MensagemItem[]>()
-              for (const msg of msgs) {
-                const idOutro = msg.idRemetente === payload.id ? msg.idDestinatario : msg.idRemetente
-                if (!byOtherUser.has(idOutro)) byOtherUser.set(idOutro, [])
-                byOtherUser.get(idOutro)!.push(msg)
-              }
-
-              for (const [idOutro, userMsgs] of byOtherUser) {
-                const ultima = userMsgs[userMsgs.length - 1]
-                const nomeOutro = ultima.remetente?.id !== payload.id
-                  ? ultima.remetente?.nome ?? 'Usuário'
-                  : 'Usuário'
-                const unreadCount = userMsgs.filter(
-                  (m) => m.idDestinatario === payload.id && !m.lidoEm
-                ).length
-
-                const key = `${v.id}:${idOutro}`
-                if (!conversaMap.has(key)) {
-                  conversaMap.set(key, {
-                    idVeiculo: v.id,
-                    veiculo: `${v.ano} ${v.marca} ${v.modelo}`,
-                    vendido: !!v.vendidoEm,
-                    idOutroUsuario: idOutro,
-                    nomeOutroUsuario: nomeOutro,
-                    ultimaMensagem: ultima,
-                    unreadCount,
-                  })
-                }
-              }
-            } catch {
-              // vehicle may not have messages
-            }
+          conversaMap.set(`${v.id}:${idOutro}`, {
+            idVeiculo: v.id,
+            veiculo: `${v.ano} ${v.marca} ${v.modelo}`,
+            vendido: !!v.vendidoEm,
+            idOutroUsuario: idOutro,
+            nomeOutroUsuario: nomeOutro,
+            ultimaMensagem: ultima,
+            unreadCount,
           })
-        )
-
-        setConversas(Array.from(conversaMap.values()))
+        }
       } catch {
-        // not logged in
-      } finally {
-        setLoading(false)
+        // vehicle may not have messages
       }
-    }
-    load()
-  }, [])
+    })
+  )
+
+  return Array.from(conversaMap.values())
+}
+
+export default function MensagensPage() {
+  const { data: conversas = [], isLoading: loading } = useQuery({
+    queryKey: ['conversas'],
+    queryFn: fetchConversas,
+  })
 
   return (
     <div className="min-h-screen">

@@ -1,5 +1,6 @@
 'use client'
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 
 interface Toast {
@@ -47,6 +48,7 @@ async function playSound() {
 }
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient()
   const [count, setCount] = useState(0)
   const [toasts, setToasts] = useState<Toast[]>([])
   const wsRef = useRef<WebSocket | null>(null)
@@ -85,6 +87,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           const msg = JSON.parse(event.data)
           if (msg.type === 'notification') {
             setCount((prev) => prev + 1)
+            queryClient.invalidateQueries({ queryKey: ['mensagens'] })
+            queryClient.invalidateQueries({ queryKey: ['mensagens-vendedor'] })
+            queryClient.invalidateQueries({ queryKey: ['conversas'] })
             playSound()
             addToast('Nova mensagem recebida')
           }

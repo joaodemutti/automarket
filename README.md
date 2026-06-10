@@ -1,143 +1,140 @@
 # AutoMarket
 
-Plataforma de compra e venda de veículos usados com chat em tempo real.
+Platform for buying and selling used vehicles with real-time chat.
 
 ## Stack
 
-- **Next.js 16** (App Router) + **TypeORM** + **PostgreSQL**
-- **jose** (JWT, Edge-compatible) + **bcrypt** (passwords)
-- **TanStack Query v5** + **Axios** (frontend data layer)
-- **ShadcnUI** + **TailwindCSS v4** (UI)
-- **chat-server/** — Node.js + `ws` standalone WebSocket service
+| Layer | Tech |
+|---|---|
+| Frontend + API | Next.js 16 (App Router) |
+| Database | PostgreSQL via TypeORM |
+| Auth | JWT stored in HTTP-only cookies |
+| Real-time chat | WebSocket server (`chat-server/`) |
+| Styling | Tailwind CSS v4 |
 
----
+## Project structure
 
-## Running locally
-
-### Prerequisites
-
-```bash
-docker compose up -d   # starts PostgreSQL on localhost:5432
+```
+.                   → Next.js app (frontend + REST API routes)
+chat-server/        → Standalone WebSocket server
+src/entity/         → TypeORM entities shared by API routes
+src/migration/      → Database migrations
 ```
 
-### 1. Next.js app
+## Local development
 
-```bash
-# Install dependencies
-npm install --strict-ssl=false   # required if corporate proxy/cert issue
+### 1. Prerequisites
 
-# Start dev server (TypeORM synchronize:true creates tables on first run)
-npm run dev
-```
+- Node.js 20+
+- PostgreSQL running locally
 
-Open [http://localhost:3000](http://localhost:3000)
+### 2. Environment — Next.js app
 
-### 2. Chat server
-
-```bash
-cd chat-server
-npm install --strict-ssl=false
-npm run dev     # starts WebSocket server on ws://localhost:8080
-```
-
-Health check: [http://localhost:8080/health](http://localhost:8080/health)
-
-### 3. API docs (Swagger)
-
-Open [http://localhost:3000/docs](http://localhost:3000/docs) (Swagger UI)
-Raw spec: [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
-
----
-
-## Environment variables
-
-### `.env.local` (app)
+Create `.env.local` at the repo root:
 
 ```env
-DATABASE_URL=postgresql://test:test@localhost:5432/test
-JWT_SECRET=automarket_super_secret_change_me_in_production
+DATABASE_URL=postgresql://user:pass@localhost:5432/automarket
+JWT_SECRET=change_me
 JWT_EXPIRES_IN=7d
 NEXT_PUBLIC_WS_URL=ws://localhost:8080
 NODE_ENV=development
 ```
 
-### `chat-server/.env`
+### 3. Environment — chat server
+
+Create `chat-server/.env`:
 
 ```env
-DATABASE_URL=postgresql://test:test@localhost:5432/test
-JWT_SECRET=automarket_super_secret_change_me_in_production   # must match app
+DATABASE_URL=postgresql://user:pass@localhost:5432/automarket
+JWT_SECRET=change_me
 PORT=8080
 ```
 
----
+> `JWT_SECRET` must be the same value in both files.
 
-## Production (Vercel + Render + Neon)
-
-**Deploy order:** Neon → Render (chat-server) → Vercel
-
-### Before first Vercel deploy — bootstrap the schema
-
-`lib/db.ts` has `synchronize: false` in production. You must create tables first:
+### 4. Run migrations
 
 ```bash
-# Option A: point .env.local at Neon direct URL temporarily and run dev once
-DATABASE_URL=<neon-direct-url>  npm run dev   # TypeORM creates tables on start
-
-# Option B: run the existing migration against Neon
-DATABASE_URL=<neon-direct-url>  npm run migration:run
+npm run migration:run
 ```
 
-### Vercel env vars
-```
-DATABASE_URL=<neon-pooled-url>?sslmode=require
-JWT_SECRET=<same-as-render>
-JWT_EXPIRES_IN=7d
-NEXT_PUBLIC_WS_URL=wss://<chat>.onrender.com
-NODE_ENV=production
-```
+### 5. Start
 
-### Render env vars (chat-server, root dir: `chat-server/`)
-```
-DATABASE_URL=<neon-direct-url>?sslmode=require
-JWT_SECRET=<same-as-vercel>
-PORT=   # injected by Render automatically
+```bash
+# Terminal 1 — Next.js
+npm run dev
+
+# Terminal 2 — WebSocket server
+cd chat-server
+npm run dev
 ```
 
 ---
 
-## Known issue: route conflict
+## Deployment
 
-`app/(public)/page.tsx` and `app/page.tsx` both map to `/`. If `next build` errors with "Multiple pages for the same route", **delete `app/(public)/page.tsx`** — the home page is at `app/page.tsx`.
+Deploy in this order: **Neon → Render → Vercel**.
+
+### Neon (database)
+
+1. Sign up at [neon.tech](https://neon.tech) and create a project.
+2. Copy the connection string — looks like:
+   ```
+   postgresql://neondb_owner:xxx@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require
+   ```
+3. Point your local `.env.local` at it and run migrations:
+   ```bash
+   npm run migration:run
+   ```
+
+### Render (WebSocket server)
+
+1. Sign up at [render.com](https://render.com) and create a **Web Service** from this repo.
+2. Configure:
+
+   | Setting | Value |
+   |---|---|
+   | Root Directory | `chat-server` |
+   | Runtime | Node |
+   | Build Command | `npm install && npm run build` |
+   | Start Command | `npm start` |
+
+3. Add environment variables:
+
+   | Key | Value |
+   |---|---|
+   | `DATABASE_URL` | Neon connection string |
+   | `JWT_SECRET` | A strong random secret |
+   | `NODE_ENV` | `production` |
+
+4. After deploy, note the service URL (e.g. `https://automarket-chat.onrender.com`).
+   Your WebSocket URL is: `wss://automarket-chat.onrender.com`
+
+> **Free tier caveat**: Render free instances spin down after 15 min of inactivity, which drops open WebSocket connections. Use a paid plan for production.
+
+### Vercel (Next.js app)
+
+1. Sign up at [vercel.com](https://vercel.com) and import this repo.
+2. Framework is auto-detected as Next.js. Leave Root Directory as `.`.
+3. Add environment variables:
+
+   | Key | Value |
+   |---|---|
+   | `DATABASE_URL` | Neon connection string |
+   | `JWT_SECRET` | Same secret as Render |
+   | `JWT_EXPIRES_IN` | `7d` |
+   | `NEXT_PUBLIC_WS_URL` | `wss://automarket-chat.onrender.com` |
+
+4. Deploy.
 
 ---
 
-## Architecture
+## Scripts
 
-```
-app/                   Next.js App Router
-  api/                 Route Handlers (JWT auth via jose + cookie)
-  (auth)/              login, register pages
-  (private)/           meus-anuncios, novo-anuncio, mensagens (JWT-guarded by middleware.ts)
-  (public)/            vehicle detail page
-  page.tsx             home — listing + filters
-lib/
-  db.ts                TypeORM DataSource singleton (global.__dataSource)
-  auth.ts              signJwt / verifyJwt / requireAuth (all async, jose)
-  axios.ts             Axios instance with 401 interceptor
-middleware.ts          Edge JWT guard — redirects (private) routes + returns 401 for API
-hooks/
-  useVeiculos.ts       useInfiniteQuery — paginated listing with filters
-  useVeiculo.ts        useQuery — single vehicle
-  useChat.ts           WebSocket + query cache integration + exponential backoff reconnect
-components/
-  ChatPanel.tsx        Real-time chat UI — sends via WS, displays history from query cache
-  Galeria.tsx          Image gallery with lightbox
-  VeiculoCard.tsx      Vehicle listing card
-  VeiculoFiltros.tsx   Filter form
-  ui/                  shadcn-style components (Button, Input, Card, Badge, …)
-chat-server/           Standalone Node.js + ws WebSocket server (deploy on Render)
-  src/index.ts         HTTP server + WSS, heartbeat, auth via subprotocol token
-  src/rooms.ts         Room map + broadcast + user→socket registry
-  src/db.ts            TypeORM DataSource (synchronize:false, single connection)
-  entities/            Verbatim copies of usuario.entity.ts + mensagem.entity.ts
-```
+| Command | Description |
+|---|---|
+| `npm run dev` | Start Next.js dev server |
+| `npm run build` | Build for production |
+| `npm run migration:run` | Apply pending migrations |
+| `npm run migration:generate` | Generate a new migration from entity changes |
+| `npm run migration:revert` | Revert the last migration |

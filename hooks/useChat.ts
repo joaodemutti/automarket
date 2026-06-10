@@ -12,6 +12,7 @@ export interface MensagemItem {
   criadoEm: string
   lidoEm: string | null
   remetente: { id: string; nome: string } | null
+  destinatario: { id: string; nome: string } | null
 }
 
 export function useChat(idVeiculo: string, idDestinatario: string) {
