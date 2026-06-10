@@ -8,7 +8,7 @@ import { Veiculo } from './entity/veiculo.entity'
 import { Imagem } from './entity/imagem.entity'
 
 const SEED_IMAGES_DIR = path.join(process.cwd(), 'seed-images')
-const IMAGE_EXTENSIONS = /\.(jpg|jpeg|png|webp)$/i
+const IMAGE_EXTENSIONS = /\.(jpg|jpeg)$/i
 
 const VEICULOS_SEED = [
   { modelo: 'Gol', marca: 'Volkswagen', ano: 2019, cor: 'Branco', motorizacao: '1.0', quilometragem: 45000, valor: 38000, descricao: 'Gol em ótimo estado, revisado e com manual.' },

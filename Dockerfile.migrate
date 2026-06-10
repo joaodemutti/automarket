@@ -3,4 +3,4 @@ WORKDIR /app
 COPY package*.json tsconfig.json ./
 RUN npm install --strict-ssl=false
 COPY src/ ./src/
-CMD ["npx", "typeorm-ts-node-commonjs", "schema:sync", "-d", "src/data-source.ts"]
+CMD ["npx", "typeorm-ts-node-commonjs", "migration:run", "-d", "src/data-source.ts"]

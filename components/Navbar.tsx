@@ -27,7 +27,7 @@ export function Navbar() {
 
   async function logout() {
     await api.post('/auth/logout')
-    queryClient.clear()
+    queryClient.setQueryData(['me'], null)
     router.push('/login')
   }
 
