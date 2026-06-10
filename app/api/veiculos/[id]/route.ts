@@ -38,6 +38,71 @@ export async function GET(
 /**
  * @swagger
  * /api/veiculos/{id}:
+ *   put:
+ *     summary: Atualiza veiculo (auth, apenas dono)
+ *     tags: [Veiculos]
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await requireAuth(request)
+  const { id } = await params
+  const body = await request.json()
+  const ds = await getDataSource()
+  const repo = ds.getRepository(Veiculo)
+
+  const veiculo = await repo.findOne({ where: { id } })
+  if (!veiculo || veiculo.deletadoEm) {
+    return Response.json({ error: 'Veiculo nao encontrado' }, { status: 404 })
+  }
+  if (veiculo.idVendedor !== user.id) {
+    return Response.json({ error: 'Sem permissao' }, { status: 403 })
+  }
+  if (veiculo.vendidoEm) {
+    return Response.json({ error: 'Veiculo vendido nao pode ser editado' }, { status: 400 })
+  }
+
+  const valor = Number(body.valor)
+  const ano = Number.parseInt(String(body.ano), 10)
+  const quilometragem = Number.parseInt(String(body.quilometragem), 10)
+  const descricao = String(body.descricao ?? '').trim()
+  const modelo = String(body.modelo ?? '').trim()
+  const cor = String(body.cor ?? '').trim()
+  const marca = String(body.marca ?? '').trim()
+  const motorizacao = String(body.motorizacao ?? '').trim()
+
+  if (
+    !descricao ||
+    !modelo ||
+    !cor ||
+    !marca ||
+    !motorizacao ||
+    Number.isNaN(valor) ||
+    Number.isNaN(ano) ||
+    Number.isNaN(quilometragem)
+  ) {
+    return Response.json({ error: 'Todos os campos sao obrigatorios' }, { status: 400 })
+  }
+
+  repo.merge(veiculo, {
+    valor,
+    descricao,
+    modelo,
+    ano,
+    cor,
+    marca,
+    motorizacao,
+    quilometragem,
+  })
+  await repo.save(veiculo)
+
+  return Response.json(veiculo)
+}
+
+/**
+ * @swagger
+ * /api/veiculos/{id}:
  *   delete:
  *     summary: Soft-delete de veículo (auth, apenas dono)
  *     tags: [Veículos]

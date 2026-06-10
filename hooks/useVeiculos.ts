@@ -10,6 +10,8 @@ export interface VeiculoFiltros {
   valorMin?: number
   valorMax?: number
   quilometragemMax?: number
+  incluirVendidos?: boolean
+  idVendedor?: string
 }
 
 export interface VeiculoMeta {
@@ -33,6 +35,7 @@ export interface VeiculoItem {
   quilometragem: number
   vendidoEm?: string
   criadoEm: string
+  imagemCapa?: string | null
 }
 
 export function useVeiculos(filtros: VeiculoFiltros = {}) {

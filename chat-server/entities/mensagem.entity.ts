@@ -21,6 +21,9 @@ export class Mensagem {
   @Column({ name: 'CriadoEm', type: 'timestamp' })
   criadoEm: Date;
 
+  @Column({ name: 'LidoEm', type: 'timestamp', nullable: true })
+  lidoEm: Date | null;
+
   @ManyToOne(()=>Usuario)
   @JoinColumn({name:"IdRemetente"})
   remetente: Relation<Usuario>

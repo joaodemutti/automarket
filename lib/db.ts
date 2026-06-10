@@ -10,13 +10,22 @@ declare global {
   var __dataSource: DataSource | undefined
 }
 
+const databaseUrl = process.env.DATABASE_URL
+const sslMode = process.env.DATABASE_SSL
+
+const shouldUseSsl =
+  sslMode === 'true' ||
+  databaseUrl?.includes('sslmode=require') ||
+  databaseUrl?.includes('neon.tech') ||
+  false
+
 const dataSource =
   global.__dataSource ??
   new DataSource({
     type: 'postgres',
-    url: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    synchronize: process.env.NODE_ENV !== 'production',
+    url: databaseUrl,
+    ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
+    synchronize: false,
     logging: false,
     entities: [Usuario, Veiculo, Imagem, Mensagem],
   })
@@ -28,8 +37,26 @@ if (!global.__dataSource) {
 export default dataSource
 
 export async function getDataSource(): Promise<DataSource> {
-  if (!dataSource.isInitialized) {
-    await dataSource.initialize()
+  if (global.__dataSource?.isInitialized) {
+    try {
+      // After HMR, entity class objects are new — metadata lookup fails
+      global.__dataSource.getMetadata(Veiculo)
+      return global.__dataSource
+    } catch {
+      await global.__dataSource.destroy().catch(() => {})
+      global.__dataSource = undefined
+    }
   }
-  return dataSource
+
+  const fresh = new DataSource({
+    type: 'postgres',
+    url: databaseUrl,
+    ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
+    synchronize: false,
+    logging: false,
+    entities: [Usuario, Veiculo, Imagem, Mensagem],
+  })
+  await fresh.initialize()
+  global.__dataSource = fresh
+  return fresh
 }

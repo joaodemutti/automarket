@@ -1,18 +1,24 @@
 'use client'
 import { useRef, useEffect, useState } from 'react'
 import { useChat } from '@/hooks/useChat'
+import { useNotificationCount } from '@/components/NotificationProvider'
+import { api } from '@/lib/axios'
 
 interface Props {
   idVeiculo: string
   idDestinatario: string
   usuarioLogadoId: string
+  isVendedor?: boolean
+  onConfirmarVenda?: (idComprador: string) => void
+  vendido?: boolean
 }
 
-export function ChatPanel({ idVeiculo, idDestinatario, usuarioLogadoId }: Props) {
+export function ChatPanel({ idVeiculo, idDestinatario, usuarioLogadoId, isVendedor, onConfirmarVenda, vendido }: Props) {
   const { historyQuery, sendMessage, hasNotification, clearNotification } = useChat(
     idVeiculo,
     idDestinatario
   )
+  const { refresh: refreshNotifications } = useNotificationCount()
   const [texto, setTexto] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -24,6 +30,11 @@ export function ChatPanel({ idVeiculo, idDestinatario, usuarioLogadoId }: Props)
     if (hasNotification) clearNotification()
   }, [hasNotification, clearNotification])
 
+  // Mark messages as read when chat opens, and whenever new messages arrive
+  useEffect(() => {
+    api.patch(`/veiculos/${idVeiculo}/mensagens`).then(() => refreshNotifications()).catch(() => {})
+  }, [idVeiculo, historyQuery.data, refreshNotifications])
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!texto.trim()) return
@@ -34,11 +45,20 @@ export function ChatPanel({ idVeiculo, idDestinatario, usuarioLogadoId }: Props)
   const mensagens = historyQuery.data ?? []
 
   return (
-    <div className="flex flex-col border border-border rounded-xl overflow-hidden h-[480px]">
+    <div className="flex flex-col border border-border rounded-xl overflow-hidden h-120">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/50">
         <span className="font-semibold text-sm">Chat</span>
         {hasNotification && (
           <span className="ml-auto text-xs bg-red-500 text-white rounded-full px-2 py-0.5">Nova mensagem</span>
+        )}
+        {isVendedor && !vendido && (
+          <button
+            type="button"
+            onClick={() => onConfirmarVenda?.(idDestinatario)}
+            className="ml-auto text-xs bg-green-600 text-white rounded-lg px-3 py-1 hover:bg-green-700 font-medium"
+          >
+            Confirmar Venda
+          </button>
         )}
       </div>
 

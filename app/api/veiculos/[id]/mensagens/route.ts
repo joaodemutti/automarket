@@ -56,3 +56,24 @@ export async function GET(
 
   return Response.json(result)
 }
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await requireAuth(request)
+  const { id: idVeiculo } = await params
+  const ds = await getDataSource()
+
+  await ds
+    .getRepository(Mensagem)
+    .createQueryBuilder()
+    .update()
+    .set({ lidoEm: new Date() })
+    .where('"IdVeiculo" = :idVeiculo', { idVeiculo })
+    .andWhere('"IdDestinatario" = :uid', { uid: user.id })
+    .andWhere('"LidoEm" IS NULL')
+    .execute()
+
+  return Response.json({ ok: true })
+}

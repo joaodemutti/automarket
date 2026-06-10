@@ -58,17 +58,27 @@ export async function GET(request: NextRequest) {
   const valorMin = params.get('valorMin') ? parseFloat(params.get('valorMin')!) : null
   const valorMax = params.get('valorMax') ? parseFloat(params.get('valorMax')!) : null
   const quilometragemMax = params.get('quilometragemMax') ? parseInt(params.get('quilometragemMax')!) : null
+  const idVendedor = params.get('idVendedor')
+  const idComprador = params.get('idComprador')
+  const incluirVendidos = params.get('incluirVendidos') === 'true'
 
   const ds = await getDataSource()
   const qb = ds
     .getRepository(Veiculo)
     .createQueryBuilder('veiculo')
-    .andWhere('veiculo.vendidoEm IS NULL')
     .andWhere('veiculo.deletadoEm IS NULL')
     .orderBy('veiculo.criadoEm', 'DESC')
     .skip((page - 1) * limit)
     .take(limit)
 
+  // idComprador filter always includes sold vehicles (those are the bought ones)
+  if (idComprador) {
+    qb.andWhere('veiculo.idComprador = :idComprador', { idComprador })
+  } else {
+    // public listing only shows available vehicles; seller/messages view includes sold
+    if (!idVendedor && !incluirVendidos) qb.andWhere('veiculo.vendidoEm IS NULL')
+    if (idVendedor) qb.andWhere('veiculo.idVendedor = :idVendedor', { idVendedor })
+  }
   if (marca) qb.andWhere('veiculo.marca = :marca', { marca })
   if (modelo) qb.andWhere('veiculo.modelo ILIKE :modelo', { modelo: `%${modelo}%` })
   if (cor) qb.andWhere('veiculo.cor = :cor', { cor })
@@ -79,9 +89,32 @@ export async function GET(request: NextRequest) {
   if (quilometragemMax !== null) qb.andWhere('veiculo.quilometragem <= :quilometragemMax', { quilometragemMax })
 
   const [data, total] = await qb.getManyAndCount()
+  const vehicleIds = data.map((veiculo) => veiculo.id)
+
+  const imagens = vehicleIds.length
+    ? await ds
+        .getRepository(Imagem)
+        .createQueryBuilder('imagem')
+        .where('imagem.idVeiculo IN (:...vehicleIds)', { vehicleIds })
+        .andWhere('imagem.deletadoEm IS NULL')
+        .orderBy('imagem.criadoEm', 'ASC')
+        .getMany()
+    : []
+
+  const imagemCapaPorVeiculo = new Map<string, string>()
+  for (const imagem of imagens) {
+    if (!imagemCapaPorVeiculo.has(imagem.idVeiculo)) {
+      imagemCapaPorVeiculo.set(imagem.idVeiculo, imagem.conteudo.toString('base64'))
+    }
+  }
+
+  const result = data.map((veiculo) => ({
+    ...veiculo,
+    imagemCapa: imagemCapaPorVeiculo.get(veiculo.id) ?? null,
+  }))
 
   return Response.json({
-    data,
+    data: result,
     meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
   })
 }

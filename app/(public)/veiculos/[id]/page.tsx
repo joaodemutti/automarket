@@ -1,5 +1,6 @@
 'use client'
 import { use, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
@@ -21,8 +22,10 @@ interface Me {
 
 export default function VeiculoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const searchParams = useSearchParams()
+  const compradorId = searchParams.get('compradorId')
   const queryClient = useQueryClient()
-  const [chatAberto, setChatAberto] = useState(false)
+  const [chatAberto, setChatAberto] = useState(!!compradorId)
 
   const { data: veiculo, isLoading } = useVeiculo(id)
 
@@ -32,14 +35,39 @@ export default function VeiculoPage({ params }: { params: Promise<{ id: string }
     enabled: !!id,
   })
 
-  const { data: me } = useQuery<Me>({
+  const { data: vendedor } = useQuery<{ id: string; nome: string } | null>({
+    queryKey: ['usuario', veiculo?.idVendedor],
+    queryFn: () =>
+      veiculo ? api.get(`/usuarios/${veiculo.idVendedor}`).then((r) => r.data) : null,
+    enabled: !!veiculo,
+  })
+
+  const { data: me } = useQuery<Me | null>({
     queryKey: ['me'],
-    queryFn: () => api.get('/auth/ws-token').then(() => null).catch(() => null) as Promise<Me>,
+    queryFn: async () => {
+      try {
+        const { data } = await api.get('/auth/ws-token')
+        const parts = data.token.split('.')
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+        return { id: payload.id, nome: payload.nome, login: '' }
+      } catch {
+        return null
+      }
+    },
     retry: false,
   })
 
   const compraMutation = useMutation({
-    mutationFn: () => api.post(`/veiculos/${id}/compra`),
+    mutationFn: (idComprador: string | null) =>
+      api.post(`/veiculos/${id}/compra`, idComprador ? { idComprador } : {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['veiculo', id] })
+      queryClient.invalidateQueries({ queryKey: ['veiculos'] })
+    },
+  })
+
+  const cancelarMutation = useMutation({
+    mutationFn: () => api.delete(`/veiculos/${id}/compra`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['veiculo', id] })
       queryClient.invalidateQueries({ queryKey: ['veiculos'] })
@@ -66,13 +94,13 @@ export default function VeiculoPage({ params }: { params: Promise<{ id: string }
     Number(veiculo.valor)
   )
   const vendido = !!veiculo.vendidoEm
+  const isVendedor = !!me && me.id === veiculo.idVendedor
 
   return (
     <div className="min-h-screen">
-      <nav className="border-b border-border px-4 py-3 flex items-center justify-between sticky top-0 bg-background z-40">
-        <Link href="/" className="font-bold text-lg">AutoMarket</Link>
+      <div className="max-w-5xl mx-auto px-4 pt-4">
         <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">← Voltar</Link>
-      </nav>
+      </div>
 
       <div className="max-w-5xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-4">
@@ -108,34 +136,66 @@ export default function VeiculoPage({ params }: { params: Promise<{ id: string }
             <p className="text-sm leading-relaxed">{veiculo.descricao}</p>
           </div>
 
-          {!vendido && me && veiculo.idVendedor !== me.id && (
-            <div className="space-y-3">
-              <button
-                onClick={() => compraMutation.mutate()}
-                disabled={compraMutation.isPending}
-                className="w-full bg-green-600 text-white rounded-lg py-3 font-semibold hover:bg-green-700 disabled:opacity-50"
-              >
-                {compraMutation.isPending ? 'Processando…' : 'Confirmar Compra'}
-              </button>
-              {compraMutation.isError && (
-                <p className="text-sm text-red-500">
-                  {(compraMutation.error as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Erro ao comprar'}
-                </p>
-              )}
-              <button
-                onClick={() => setChatAberto((p) => !p)}
-                className="w-full border border-border rounded-lg py-2 text-sm hover:bg-muted"
-              >
-                {chatAberto ? 'Fechar chat' : 'Falar com o vendedor'}
-              </button>
-            </div>
+          {vendedor && (
+            <Link
+              href={`/usuarios/${vendedor.id}`}
+              className="flex items-center gap-3 border border-border rounded-xl p-3 hover:bg-muted transition-colors"
+            >
+              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                {vendedor.nome.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground">Vendedor</p>
+                <p className="text-sm font-medium truncate">{vendedor.nome}</p>
+              </div>
+              <span className="ml-auto text-muted-foreground text-xs">→</span>
+            </Link>
           )}
 
-          {chatAberto && me && (
+          {vendido && isVendedor && (
+            <button
+              onClick={() => cancelarMutation.mutate()}
+              disabled={cancelarMutation.isPending}
+              className="w-full border border-orange-200 text-orange-600 rounded-lg py-2 text-sm hover:bg-orange-50 disabled:opacity-50"
+            >
+              {cancelarMutation.isPending ? 'Cancelando…' : 'Cancelar venda'}
+            </button>
+          )}
+
+          {compraMutation.isError && (
+            <p className="text-sm text-red-500">
+              {(compraMutation.error as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Erro ao confirmar venda'}
+            </p>
+          )}
+
+          {!vendido && me && !isVendedor && (
+            <button
+              onClick={() => setChatAberto((p) => !p)}
+              className="w-full border border-border rounded-lg py-2 text-sm hover:bg-muted"
+            >
+              {chatAberto ? 'Fechar chat' : 'Falar com o vendedor'}
+            </button>
+          )}
+
+          {/* buyer chat */}
+          {chatAberto && me && !isVendedor && (
             <ChatPanel
               idVeiculo={id}
               idDestinatario={veiculo.idVendedor}
               usuarioLogadoId={me.id}
+              vendido={vendido}
+            />
+          )}
+
+          {/* seller chat with a specific buyer (arrived via ?compradorId=) */}
+          {chatAberto && me && isVendedor && compradorId && (
+            <ChatPanel
+              idVeiculo={id}
+              idDestinatario={compradorId}
+              usuarioLogadoId={me.id}
+              isVendedor
+              vendido={vendido}
+              onConfirmarVenda={(idComprador) => compraMutation.mutate(idComprador)}
             />
           )}
         </div>

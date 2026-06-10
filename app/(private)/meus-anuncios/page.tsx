@@ -28,9 +28,8 @@ export default function MeusAnunciosPage() {
         const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
         setMe({ id: payload.id, nome: payload.nome })
 
-        const resp = await api.get('/veiculos', { params: { limit: 48 } })
-        const all: VeiculoItem[] = resp.data.data
-        setVeiculos(all.filter((v) => v.idVendedor === payload.id))
+        const resp = await api.get('/veiculos', { params: { idVendedor: payload.id, limit: 48 } })
+        setVeiculos(resp.data.data)
       } catch {
         // not logged in
       } finally {
@@ -47,17 +46,22 @@ export default function MeusAnunciosPage() {
     queryClient.invalidateQueries({ queryKey: ['veiculos'] })
   }
 
+  async function cancelarVenda(id: string) {
+    if (!window.confirm('Cancelar a venda? O veículo voltará a aparecer como disponível.')) return
+    await api.delete(`/veiculos/${id}/compra`)
+    setVeiculos((prev) => prev.map((v) => v.id === id ? { ...v, vendidoEm: undefined, idComprador: undefined } : v))
+    queryClient.invalidateQueries({ queryKey: ['veiculos'] })
+  }
+
   return (
     <div className="min-h-screen">
-      <nav className="border-b border-border px-4 py-3 flex items-center justify-between sticky top-0 bg-background z-40">
-        <Link href="/" className="font-bold text-lg">AutoMarket</Link>
-        <Link href="/novo-anuncio" className="text-sm bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:bg-primary/90">
-          + Novo anúncio
-        </Link>
-      </nav>
-
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <h1 className="text-xl font-semibold mb-4">Meus Anúncios</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-semibold">Meus Anúncios</h1>
+          <Link href="/novo-anuncio" className="text-sm bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:bg-primary/90">
+            + Novo anúncio
+          </Link>
+        </div>
 
         {loading ? (
           <div className="space-y-3">
@@ -92,13 +96,28 @@ export default function MeusAnunciosPage() {
                     >
                       Ver
                     </Link>
-                    {!v.vendidoEm && (
+                    {v.vendidoEm ? (
                       <button
-                        onClick={() => deletar(v.id)}
-                        className="text-sm px-3 py-1.5 border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
+                        onClick={() => cancelarVenda(v.id)}
+                        className="text-sm px-3 py-1.5 border border-orange-200 text-orange-600 rounded-lg hover:bg-orange-50"
                       >
-                        Remover
+                        Cancelar venda
                       </button>
+                    ) : (
+                      <>
+                        <Link
+                          href={`/meus-anuncios/${v.id}/editar`}
+                          className="text-sm px-3 py-1.5 border border-border rounded-lg hover:bg-muted"
+                        >
+                          Editar
+                        </Link>
+                        <button
+                          onClick={() => deletar(v.id)}
+                          className="text-sm px-3 py-1.5 border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
+                        >
+                          Remover
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>

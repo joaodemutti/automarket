@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import Link from 'next/link'
 import { useVeiculos } from '@/hooks/useVeiculos'
 import type { VeiculoFiltros } from '@/hooks/useVeiculos'
 import { VeiculoCard } from '@/components/VeiculoCard'
@@ -14,18 +13,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen">
-      <nav className="border-b border-border px-4 py-3 flex items-center justify-between sticky top-0 bg-background z-40">
-        <Link href="/" className="font-bold text-lg">AutoMarket</Link>
-        <div className="flex items-center gap-3">
-          <Link href="/mensagens" className="text-sm text-muted-foreground hover:text-foreground">Mensagens</Link>
-          <Link href="/meus-anuncios" className="text-sm text-muted-foreground hover:text-foreground">Meus Anúncios</Link>
-          <Link href="/novo-anuncio" className="text-sm bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:bg-primary/90">
-            + Anunciar
-          </Link>
-          <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">Entrar</Link>
-        </div>
-      </nav>
-
       <div className="max-w-7xl mx-auto px-4 py-6 flex gap-6">
         <aside className="w-64 shrink-0">
           <FiltrosComponent onFiltrar={setFiltros} />

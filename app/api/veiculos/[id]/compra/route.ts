@@ -32,6 +32,7 @@ export async function POST(
 ) {
   const user = await requireAuth(request)
   const { id } = await params
+  const body = await request.json().catch(() => ({})) as { idComprador?: string }
   const ds = await getDataSource()
 
   try {
@@ -42,14 +43,14 @@ export async function POST(
       if (!v || v.deletadoEm) {
         throw { status: 404, message: 'Veículo não encontrado' }
       }
-      if (v.vendidoEm || v.idComprador) {
+      if (v.idVendedor !== user.id) {
+        throw { status: 403, message: 'Apenas o vendedor pode confirmar a venda' }
+      }
+      if (v.vendidoEm) {
         throw { status: 409, message: 'Veículo já vendido' }
       }
-      if (v.idVendedor === user.id) {
-        throw { status: 400, message: 'Vendedor não pode comprar o próprio veículo' }
-      }
 
-      v.idComprador = user.id
+      if (body.idComprador) v.idComprador = body.idComprador
       v.vendidoEm = new Date()
       return repo.save(v)
     })
@@ -62,4 +63,31 @@ export async function POST(
     }
     throw err
   }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await requireAuth(request)
+  const { id } = await params
+  const ds = await getDataSource()
+  const repo = ds.getRepository(Veiculo)
+
+  const v = await repo.findOne({ where: { id } })
+  if (!v || v.deletadoEm) {
+    return Response.json({ error: 'Veículo não encontrado' }, { status: 404 })
+  }
+  if (v.idVendedor !== user.id) {
+    return Response.json({ error: 'Apenas o vendedor pode cancelar a venda' }, { status: 403 })
+  }
+  if (!v.vendidoEm) {
+    return Response.json({ error: 'Veículo não está marcado como vendido' }, { status: 400 })
+  }
+
+  v.vendidoEm = null as unknown as Date
+  v.idComprador = null as unknown as string
+  await repo.save(v)
+
+  return Response.json(v)
 }

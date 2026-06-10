@@ -86,6 +86,16 @@ export function VeiculoFiltros({ onFiltrar, inicial = {} }: Props) {
         />
       </div>
 
+      <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+        <input
+          type="checkbox"
+          className="rounded border-border"
+          checked={!!f.incluirVendidos}
+          onChange={(e) => setF((prev) => ({ ...prev, incluirVendidos: e.target.checked || undefined }))}
+        />
+        Mostrar vendidos
+      </label>
+
       <div className="flex gap-2">
         <button type="submit" className="btn-primary flex-1">Filtrar</button>
         <button type="button" onClick={limpar} className="btn-secondary flex-1">Limpar</button>

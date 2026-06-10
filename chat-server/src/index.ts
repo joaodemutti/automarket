@@ -110,9 +110,9 @@ wss.on('connection', (ws: WebSocket, req: http.IncomingMessage) => {
 
     broadcast(roomKey, broadcastData)
 
-    // Notify destinatario if connected but not in this room
+    // Notify destinatario if connected but not actively in this room
     const notificationData = JSON.stringify({ type: 'notification' })
-    notifyUser(idDestinatario, notificationData)
+    notifyUser(idDestinatario, notificationData, roomKey)
   })
 
   authWs.on('close', () => {

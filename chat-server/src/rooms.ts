@@ -40,7 +40,18 @@ export function unregisterSocket(ws: AuthenticatedSocket): void {
 }
 
 export function notifyUser(userId: string, data: string, excludeRoomKey?: string): void {
-  userSockets.get(userId)?.forEach((ws) => {
+  const sockets = userSockets.get(userId)
+  if (!sockets) return
+
+  // If the user has a socket actively in this room they already receive the message
+  // via broadcast — skip the notification entirely so the sound doesn't play
+  // for someone who is already watching the chat.
+  if (excludeRoomKey) {
+    const roomMembers = rooms.get(excludeRoomKey)
+    if (roomMembers && [...sockets].some((ws) => roomMembers.has(ws))) return
+  }
+
+  sockets.forEach((ws) => {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(data)
     }
