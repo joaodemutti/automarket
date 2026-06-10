@@ -11,6 +11,7 @@ interface Conversa {
   idOutroUsuario: string
   nomeOutroUsuario: string
   ultimaMensagem: MensagemItem
+  interessadosCount?: number
 }
 
 export default function MensagensPage() {
@@ -32,9 +33,17 @@ export default function MensagensPage() {
         await Promise.all(
           veiculos.map(async (v) => {
             try {
-              const msgsResp = await api.get(`/veiculos/${v.id}/mensagens`)
-              const msgs: MensagemItem[] = msgsResp.data
+              const [msgsResp, interessadosResp] = await Promise.allSettled([
+                api.get(`/veiculos/${v.id}/mensagens`),
+                api.get(`/veiculos/${v.id}/interessados`),
+              ])
+
+              const msgs: MensagemItem[] = msgsResp.status === 'fulfilled' ? msgsResp.value.data : []
               if (msgs.length === 0) return
+
+              const interessadosCount = interessadosResp.status === 'fulfilled'
+                ? Number(interessadosResp.value.data.count ?? 0)
+                : undefined
 
               const ultima = msgs[msgs.length - 1]
               const idOutro = ultima.idRemetente === payload.id ? ultima.idDestinatario : ultima.idRemetente
@@ -51,6 +60,7 @@ export default function MensagensPage() {
                   idOutroUsuario: idOutro,
                   nomeOutroUsuario: nomeOutro,
                   ultimaMensagem: ultima,
+                  interessadosCount,
                 })
               }
             } catch {
@@ -104,7 +114,14 @@ export default function MensagensPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-primary font-medium truncate">{c.veiculo}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs text-primary font-medium truncate">{c.veiculo}</p>
+                    {!!c.interessadosCount && c.interessadosCount > 0 && (
+                      <span className="shrink-0 text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-1.5 py-0.5">
+                        {c.interessadosCount} interessados
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-muted-foreground truncate">{c.ultimaMensagem.mensagem}</p>
                 </div>
                 <span className="text-xs text-muted-foreground shrink-0">

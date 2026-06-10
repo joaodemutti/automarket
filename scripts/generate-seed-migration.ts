@@ -8,13 +8,13 @@ const IMAGE_EXTENSIONS = /\.(jpg|jpeg)$/i
 const TIMESTAMP = Date.now()
 
 const VEICULOS_SEED = [
-  { modelo: 'Gol', marca: 'Volkswagen', ano: 2019, cor: 'Branco', motorizacao: '1.0', quilometragem: 45000, valor: 38000, descricao: 'Gol em ótimo estado, revisado e com manual.', vendido: true },
-  { modelo: 'Onix', marca: 'Chevrolet', ano: 2021, cor: 'Prata', motorizacao: '1.0 Turbo', quilometragem: 22000, valor: 62000, descricao: 'Onix turbo completo, único dono.', vendido: true },
-  { modelo: 'HB20', marca: 'Hyundai', ano: 2020, cor: 'Vermelho', motorizacao: '1.0', quilometragem: 35000, valor: 55000, descricao: 'HB20 bem conservado, IPVA pago.', vendido: false },
-  { modelo: 'Kwid', marca: 'Renault', ano: 2022, cor: 'Azul', motorizacao: '1.0', quilometragem: 15000, valor: 52000, descricao: 'Kwid seminovo com garantia de fábrica.', vendido: false },
-  { modelo: 'Polo', marca: 'Volkswagen', ano: 2023, cor: 'Preto', motorizacao: '1.0 TSI', quilometragem: 8000, valor: 89000, descricao: 'Polo TSI top de linha, impecável.', vendido: false },
-  { modelo: 'Argo', marca: 'Fiat', ano: 2022, cor: 'Cinza', motorizacao: '1.0', quilometragem: 28000, valor: 68000, descricao: 'Fiat Argo Drive completo, revisado na concessionária.', vendido: false },
-  { modelo: 'Fusca', marca: 'Volkswagen', ano: 1973, cor: 'Azul', motorizacao: '1.6', quilometragem: 85000, valor: 45000, descricao: 'Fusca clássico em excelente estado, raridade colecionável.', vendido: false },
+  { modelo: 'Gol', marca: 'Volkswagen', ano: 2019, cor: 'Branco', motorizacao: '1.0', quilometragem: 45000, valor: 38000, descricao: 'Gol em ótimo estado, revisado e com manual.', vendido: true, folder: 'gol' },
+  { modelo: 'Onix', marca: 'Chevrolet', ano: 2021, cor: 'Prata', motorizacao: '1.0 Turbo', quilometragem: 22000, valor: 62000, descricao: 'Onix turbo completo, único dono.', vendido: true, folder: 'onix' },
+  { modelo: 'HB20', marca: 'Hyundai', ano: 2020, cor: 'Vermelho', motorizacao: '1.0', quilometragem: 35000, valor: 55000, descricao: 'HB20 bem conservado, IPVA pago.', vendido: false, folder: 'hb20' },
+  { modelo: 'Kwid', marca: 'Renault', ano: 2022, cor: 'Azul', motorizacao: '1.0', quilometragem: 15000, valor: 52000, descricao: 'Kwid seminovo com garantia de fábrica.', vendido: false, folder: 'kwid' },
+  { modelo: 'Polo', marca: 'Volkswagen', ano: 2023, cor: 'Preto', motorizacao: '1.0 TSI', quilometragem: 8000, valor: 89000, descricao: 'Polo TSI top de linha, impecável.', vendido: false, folder: 'polo' },
+  { modelo: 'Argo', marca: 'Fiat', ano: 2022, cor: 'Cinza', motorizacao: '1.0', quilometragem: 28000, valor: 68000, descricao: 'Fiat Argo Drive completo, revisado na concessionária.', vendido: false, folder: 'argo' },
+  { modelo: 'Fusca', marca: 'Volkswagen', ano: 1973, cor: 'Azul', motorizacao: '1.6', quilometragem: 85000, valor: 45000, descricao: 'Fusca clássico em excelente estado, raridade colecionável.', vendido: false, folder: 'fusca' },
 ]
 
 // buyer1 + buyer2 = 2 interessados; buyer1 only = 1 interessado
@@ -49,13 +49,7 @@ async function main() {
   const buyer2Id = crypto.randomUUID()
   const buyerIds: Record<string, string> = { buyer1: buyer1Id, buyer2: buyer2Id }
 
-  const subfolders = fs.existsSync(SEED_IMAGES_DIR)
-    ? fs.readdirSync(SEED_IMAGES_DIR).filter(n =>
-        fs.statSync(path.join(SEED_IMAGES_DIR, n)).isDirectory()
-      )
-    : []
-
-  const flatImages = subfolders.length === 0 ? readImages(SEED_IMAGES_DIR) : []
+  const flatImages = readImages(SEED_IMAGES_DIR)
 
   const lines: string[] = []
 
@@ -105,12 +99,10 @@ async function main() {
     }
     lines.push(``)
 
-    let images: string[] = []
-    if (subfolders[i]) {
-      images = readImages(path.join(SEED_IMAGES_DIR, subfolders[i]))
-    } else if (flatImages.length > 0) {
-      images = [flatImages[i % flatImages.length]]
-    }
+    const folderPath = path.join(SEED_IMAGES_DIR, v.folder)
+    const images = fs.existsSync(folderPath)
+      ? readImages(folderPath)
+      : flatImages.length > 0 ? [flatImages[i % flatImages.length]] : []
 
     for (const hex of images) {
       const imgId = crypto.randomUUID()

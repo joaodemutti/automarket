@@ -59,6 +59,7 @@ export class Migration1774656359654 implements MigrationInterface {
                 "IdDestinatario" uuid NOT NULL,
                 "IdVeiculo" uuid NOT NULL,
                 "CriadoEm" TIMESTAMP NOT NULL,
+                "LidoEm" TIMESTAMP,
                 CONSTRAINT "PK_Mensagem" PRIMARY KEY ("Id"),
                 CONSTRAINT "FK_Mensagem_Remetente" FOREIGN KEY ("IdRemetente") REFERENCES "Usuario"("Id"),
                 CONSTRAINT "FK_Mensagem_Destinatario" FOREIGN KEY ("IdDestinatario") REFERENCES "Usuario"("Id"),
