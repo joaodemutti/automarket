@@ -4,10 +4,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
+import { useNotificationCount } from '@/components/NotificationProvider'
 
 export default function RegisterPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const { reconnect } = useNotificationCount()
   const [form, setForm] = useState({ login: '', senha: '', nome: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -24,6 +26,7 @@ export default function RegisterPage() {
       await api.post('/auth/register', form)
       await api.post('/auth/login', { login: form.login, senha: form.senha })
       await queryClient.invalidateQueries({ queryKey: ['me'] })
+      reconnect()
       const redirect = sessionStorage.getItem('redirect')
       if (redirect) {
         sessionStorage.removeItem('redirect')

@@ -12,9 +12,10 @@ interface NotificationCtx {
   count: number
   clearCount: () => void
   refresh: () => void
+  reconnect: () => void
 }
 
-const Ctx = createContext<NotificationCtx>({ count: 0, clearCount: () => {}, refresh: () => {} })
+const Ctx = createContext<NotificationCtx>({ count: 0, clearCount: () => {}, refresh: () => {}, reconnect: () => {} })
 
 export function useNotificationCount() {
   return useContext(Ctx)
@@ -129,8 +130,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const clearCount = useCallback(() => setCount(0), [])
 
+  const reconnect = useCallback(() => {
+    if (reconnectRef.current) clearTimeout(reconnectRef.current)
+    if (pingRef.current) clearInterval(pingRef.current)
+    wsRef.current?.close()
+    backoffRef.current = 1000
+    connect()
+  }, [connect])
+
   return (
-    <Ctx.Provider value={{ count, clearCount, refresh }}>
+    <Ctx.Provider value={{ count, clearCount, refresh, reconnect }}>
       {children}
 
       {/* Toast container */}
