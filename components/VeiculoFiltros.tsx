@@ -31,6 +31,13 @@ export function VeiculoFiltros({ onFiltrar, inicial = {} }: Props) {
       </div>
 
       <div className="px-5 py-4 space-y-5">
+        <input
+          className="input-field"
+          placeholder="Buscar por marca, modelo, cor…"
+          value={f.buscar ?? ''}
+          onChange={(e) => handle('buscar', e.target.value)}
+        />
+
         <div className="space-y-2">
           <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Veículo</p>
           <input

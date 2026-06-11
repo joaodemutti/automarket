@@ -2,6 +2,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 
 export interface VeiculoFiltros {
+  buscar?: string
   marca?: string
   modelo?: string
   cor?: string

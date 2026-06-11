@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
 
   const page = Math.max(1, parseInt(params.get('page') ?? '1'))
   const limit = Math.min(48, Math.max(1, parseInt(params.get('limit') ?? '12')))
+  const buscar = params.get('buscar')
   const marca = params.get('marca')
   const modelo = params.get('modelo')
   const cor = params.get('cor')
@@ -80,9 +81,13 @@ export async function GET(request: NextRequest) {
     if (!idVendedor && !incluirVendidos) qb.andWhere('veiculo.vendidoEm IS NULL')
     if (idVendedor) qb.andWhere('veiculo.idVendedor = :idVendedor', { idVendedor })
   }
-  if (marca) qb.andWhere('veiculo.marca = :marca', { marca })
+  if (buscar) qb.andWhere(
+    '(veiculo.marca ILIKE :buscar OR veiculo.modelo ILIKE :buscar OR veiculo.cor ILIKE :buscar OR veiculo.descricao ILIKE :buscar OR veiculo.motorizacao ILIKE :buscar)',
+    { buscar: `%${buscar}%` }
+  )
+  if (marca) qb.andWhere('veiculo.marca ILIKE :marca', { marca: `%${marca}%` })
   if (modelo) qb.andWhere('veiculo.modelo ILIKE :modelo', { modelo: `%${modelo}%` })
-  if (cor) qb.andWhere('veiculo.cor = :cor', { cor })
+  if (cor) qb.andWhere('veiculo.cor ILIKE :cor', { cor: `%${cor}%` })
   if (anoMin !== null) qb.andWhere('veiculo.ano >= :anoMin', { anoMin })
   if (anoMax !== null) qb.andWhere('veiculo.ano <= :anoMax', { anoMax })
   if (valorMin !== null) qb.andWhere('veiculo.valor >= :valorMin', { valorMin })
@@ -108,7 +113,9 @@ export async function GET(request: NextRequest) {
           .createQueryBuilder('m')
           .select('m."IdVeiculo"', 'idVeiculo')
           .addSelect('COUNT(DISTINCT m."IdRemetente")', 'count')
+          .innerJoin(Veiculo, 'v', 'v."Id" = m."IdVeiculo"')
           .where('m."IdVeiculo" IN (:...vehicleIds)', { vehicleIds })
+          .andWhere('m."IdRemetente" != v."IdVendedor"')
           .groupBy('m."IdVeiculo"')
           .getRawMany<{ idVeiculo: string; count: string }>()
       : Promise.resolve([]),

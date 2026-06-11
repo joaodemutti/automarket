@@ -36,6 +36,7 @@ export async function GET(
     .createQueryBuilder('m')
     .select('COUNT(DISTINCT m."IdRemetente")', 'count')
     .where('m."IdVeiculo" = :id', { id })
+    .andWhere('m."IdRemetente" != :sellerId', { sellerId: veiculo.idVendedor })
     .getRawOne<{ count: string }>()
   return Response.json({ ...veiculo, interessadosCount: Number(row?.count ?? 0) })
 }
